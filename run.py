@@ -55,8 +55,11 @@ def get_confs(opt):
     # Get dataset builder class from the processing script
     builder_cls = nlp.load.import_main_class(module_path, dataset=True)
     # Instantiate the dataset builder
-    return builder_cls.BUILDER_CONFIGS
-
+    confs = builder_cls.BUILDER_CONFIGS
+    if confs and len(confs) > 1:
+        return confs
+    else:
+        return []
 
 @st.cache(allow_output_mutation=True)
 def get(opt, conf=None):
