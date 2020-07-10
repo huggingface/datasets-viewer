@@ -83,12 +83,12 @@ if start:
     ## Logo and sidebar decoration.
     st.sidebar.markdown(
         """<center>
-    <a href="http://github.com/huggingface/nlp">
+    <a href="https://github.com/huggingface/nlp">
     <img src="https://raw.githubusercontent.com/huggingface/nlp/master/docs/source/imgs/nlp_logo_name.png" width="200"></a>
     </center>""",
         unsafe_allow_html=True,
     )
-    st.sidebar.subheader("http://github.com/huggingface/nlp")
+    st.sidebar.subheader("github.com/huggingface/nlp")
     st.sidebar.markdown(
         """
     <center>
