@@ -48,6 +48,20 @@ def _max_width_():
 
 _max_width_()
 
+def render_features(features):
+    if isinstance(features, dict):
+        return {k: render_features(v) for k, v in features.items()}
+    if isinstance(features, nlp.features.ClassLabel):
+        return features.names
+
+    if isinstance(features, nlp.features.Value):
+        return features.dtype
+
+    if isinstance(features, nlp.features.Sequence):
+        return {"[]": render_features(features.feature)}
+    
+    return features
+
 import time
 
 
@@ -70,6 +84,8 @@ if app_state == "NOT_INITIALIZED":
           bar.empty()
           loaded = True
 
+
+          
 if start:
     app_state = st.experimental_get_query_string()
     print("appstate is", app_state)
@@ -214,7 +230,7 @@ if start:
 
         citation = st.sidebar.checkbox("Show Citations", False)
         table = not st.sidebar.checkbox("Show List View", False)
-        show_features = st.sidebar.checkbox("Show Features", False)
+        show_features = st.sidebar.checkbox("Show Features", True)
         md = """
 ```
 %s
@@ -227,7 +243,7 @@ if start:
         #st.text("Features:")
         if show_features:
             on_keys = st.multiselect("Features", keys, keys)
-            st.write(d.features)
+            st.write(render_features(d.features))
         else:
             on_keys = keys
         if not table:
