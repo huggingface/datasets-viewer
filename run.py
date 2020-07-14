@@ -14,7 +14,7 @@ import streamlit.ReportThread as ReportThread
 from streamlit.server.Server import Server
 
 
-
+# /home/sasha/.local/share/virtualenvs/lib-ogGKnCK_/bin/python /home/sasha/.local/share/virtualenvs/lib-ogGKnCK_/bin/streamlit run /home/sasha/nlp-viewer/run.py --server.port 8000 --server.baseUrlPath /nlp/viewer/ --browser.serverAddress huggingface.co --browser.serverPort 80 --server.enableCORS false
 
 
 MAX_SIZE = 40000000000
@@ -84,18 +84,17 @@ if app_state == "NOT_INITIALIZED":
           bar.empty()
           loaded = True
 
-
+          app_state = st.experimental_get_query_string()
+          print("appstate is", app_state)
+          app_state.setdefault("dataset", "glue")
+          if len(app_state.get("dataset", [])) == 1:
+              app_state["dataset"] = app_state["dataset"][0]
+          if len(app_state.get("config", [])) == 1:
+              app_state["config"] = app_state["config"][0]
           
 if start:
-    app_state = st.experimental_get_query_string()
-    print("appstate is", app_state)
-    app_state.setdefault("dataset", "glue")
-    if len(app_state.get("dataset", [])) == 1:
-        app_state["dataset"] = app_state["dataset"][0]
-    if len(app_state.get("config", [])) == 1:
-        app_state["config"] = app_state["config"][0]
 
-    INITIAL_SELECTION = app_state["dataset"]
+    INITIAL_SELECTION = "glue"
     ## Logo and sidebar decoration.
     st.sidebar.markdown(
         """<center>
@@ -104,12 +103,13 @@ if start:
     </center>""",
         unsafe_allow_html=True,
     )
-    st.sidebar.subheader("github.com/huggingface/nlp")
+    st.sidebar.subheader("https://github.com/huggingface/nlp")
     st.sidebar.markdown(
         """
     <center>
-        <a target="_blank" href="https://colab.research.google.com/github/huggingface/nlp/blob/master/notebooks/Overview.ipynb">Library Overview</a>
-    | <a href="https://github.com/huggingface/nlp/blob/master/CONTRIBUTING.md#how-to-add-a-dataset" target="_blank">Submit dataset</a>
+        <a target="_blank" href="https://huggingface.co/nlp/">Docs</a> | 
+        <a target="_blank" href="https://colab.research.google.com/github/huggingface/nlp/blob/master/notebooks/Overview.ipynb"> Overview</a>
+    | <a href="https://github.com/huggingface/nlp/blob/master/CONTRIBUTING.md#how-to-add-a-dataset" target="_blank">Add dataset</a>
     </center>""",
         unsafe_allow_html=True,
     )
@@ -133,6 +133,7 @@ if start:
     @st.cache(allow_output_mutation=True)
     def get(opt, conf=None):
         "Get a dataset from name and conf"
+
         module_path = nlp.load.prepare_module(opt, dataset=True)
         builder_cls = nlp.load.import_main_class(module_path, dataset=True)
         if conf:
@@ -206,13 +207,16 @@ if start:
 
         keys = list(d[0].keys())
 
-        st.subheader(
+        st.header(
             "Dataset: "
             + option.id
             + " "
-            + (("/ " + conf_option.name) if conf_option else "")
-            + " - " + d.info.homepage
-        )
+            + (("/ " + conf_option.name) if conf_option else ""))
+
+
+        st.markdown(
+            "*Homepage*: " +d.info.homepage + 
+            "\n\n*Dataset*: https://github.com/huggingface/nlp/blob/master/datasets/%s/%s.py"%(option.id, option.id))
 
         md = """
         %s
