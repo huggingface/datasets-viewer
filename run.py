@@ -70,6 +70,7 @@ app_state = st.experimental_get_query_string()
 
 start = True
 loaded = False
+INITIAL_SELECTION = ""
 if app_state == "NOT_INITIALIZED":
     latest_iteration = st.empty()
     bar = st.progress(0)
@@ -89,12 +90,12 @@ if app_state == "NOT_INITIALIZED":
           app_state.setdefault("dataset", "glue")
           if len(app_state.get("dataset", [])) == 1:
               app_state["dataset"] = app_state["dataset"][0]
+              INITIAL_SELECTION = app_state["dataset"]
           if len(app_state.get("config", [])) == 1:
               app_state["config"] = app_state["config"][0]
+        
           
 if start:
-
-    INITIAL_SELECTION = "glue"
     ## Logo and sidebar decoration.
     st.sidebar.markdown(
         """<center>
@@ -109,7 +110,7 @@ if start:
     <center>
         <a target="_blank" href="https://huggingface.co/nlp/">Docs</a> | 
         <a target="_blank" href="https://colab.research.google.com/github/huggingface/nlp/blob/master/notebooks/Overview.ipynb"> Overview</a>
-    | <a href="https://github.com/huggingface/nlp/blob/master/CONTRIBUTING.md#how-to-add-a-dataset" target="_blank">Add dataset</a>
+    | <a href="https://huggingface.co/nlp/add_dataset.html" target="_blank">Add Dataset</a>
     </center>""",
         unsafe_allow_html=True,
     )
@@ -122,7 +123,7 @@ if start:
         "Get the list of confs for a dataset."
         module_path = nlp.load.prepare_module(opt, dataset=True)
         # Get dataset builder class from the processing script
-        builder_cls = nlp.load.import_main_class(module_path, dataset=True)
+        builder_cls = nlp.load.import_main_class(module_path[0], dataset=True)
         # Instantiate the dataset builder
         confs = builder_cls.BUILDER_CONFIGS
         if confs and len(confs) > 1:
@@ -135,7 +136,7 @@ if start:
         "Get a dataset from name and conf"
 
         module_path = nlp.load.prepare_module(opt, dataset=True)
-        builder_cls = nlp.load.import_main_class(module_path, dataset=True)
+        builder_cls = nlp.load.import_main_class(module_path[0], dataset=True)
         if conf:
             builder_instance = builder_cls(name=conf)
         else:
@@ -157,14 +158,20 @@ if start:
 
     # Dataset select box.
     datasets = []
+    selection = None
     for i, dataset in enumerate(nlp.list_datasets(with_community_datasets=False)):
-        if dataset.id == INITIAL_SELECTION:
-            start = i
+        if INITIAL_SELECTION and dataset.id == INITIAL_SELECTION:
+            selection = i
         datasets.append(dataset)
 
-    option = st.sidebar.selectbox(
-        "Dataset", datasets, index=start, format_func=lambda a: a.id
-    )
+    if selection is not None:
+        option = st.sidebar.selectbox(
+            "Dataset", datasets, index=selection, format_func=lambda a: a.id
+        )
+    else:
+        option = st.sidebar.selectbox(
+            "Dataset", datasets, format_func=lambda a: a.id
+        )
     print(option.id)
     app_state["dataset"] = option.id
     st.experimental_set_query_string(app_state)    
