@@ -1,6 +1,6 @@
-# Hugging Face nlp-viewer
+# Hugging Face Datasets Viewer
 
-Viewer for the Hugging Face nlp datasets library. 
+Viewer for the Hugging Face datasets library. 
 
 
 <img src="viewer.png" />
