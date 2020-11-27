@@ -82,7 +82,7 @@ if app_state == "NOT_INITIALIZED":
           bar.empty()
           loaded = True
 
-          app_state = st.experimental_get_query_string()
+          app_state = st.experimental_get_query_params()
           print("appstate is", app_state)
           app_state.setdefault("dataset", "glue")
           if len(app_state.get("dataset", [])) == 1:
@@ -172,7 +172,7 @@ if start:
         )
     print(option)
     app_state["dataset"] = option
-    st.experimental_set_query_string(app_state)    
+    st.experimental_set_query_params(**app_state)    
 
     # Side bar Configurations.
     configs = get_confs(option)
@@ -189,7 +189,7 @@ if start:
     else:
         if "config" in app_state:
             del app_state["config"]
-    st.experimental_set_query_string(app_state)    
+    st.experimental_set_query_params(**app_state)    
 
     dts, fail = get(str(option), str(conf_option.name) if conf_option else None)
 
