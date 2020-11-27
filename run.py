@@ -1,12 +1,13 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import nlp
+import datasets
 from dataclasses import asdict
 import yaml
 import textwrap
 import tornado
 import json
+nlp = datasets
 
 from streamlit.server.Server import Server
 
@@ -99,17 +100,18 @@ if start:
     ## Logo and sidebar decoration.
     st.sidebar.markdown(
         """<center>
-    <a href="https://github.com/huggingface/nlp">
-    <img src="https://raw.githubusercontent.com/huggingface/nlp/master/docs/source/imgs/nlp_logo_name.png" width="200"></a>
+    <a href="https://github.com/huggingface/datasets">
+    </a>
     </center>""",
         unsafe_allow_html=True,
     )
-    st.sidebar.subheader("https://github.com/huggingface/nlp")
+    st.sidebar.image("datasets_logo_name.png", width=300)
+    st.sidebar.markdown("<center><h2><a href='https://github.com/huggingface/datasets'>github/huggingface/datasets</h2></a></center>", unsafe_allow_html=True)
     st.sidebar.markdown(
         """
     <center>
         <a target="_blank" href="https://huggingface.co/nlp/">Docs</a> | 
-        <a target="_blank" href="https://colab.research.google.com/github/huggingface/nlp/blob/master/notebooks/Overview.ipynb"> Overview</a>
+        <a target="_blank" href="https://colab.research.google.com/github/huggingface/datasets/blob/master/notebooks/Overview.ipynb"> Overview</a>
     | <a href="https://huggingface.co/nlp/add_dataset.html" target="_blank">Add Dataset</a>
     </center>""",
         unsafe_allow_html=True,
@@ -160,24 +162,24 @@ if start:
     datasets = []
     selection = None
     for i, dataset in enumerate(nlp.list_datasets(with_community_datasets=False)):
-        if INITIAL_SELECTION and dataset.id == INITIAL_SELECTION:
+        if INITIAL_SELECTION and dataset == INITIAL_SELECTION:
             selection = i
         datasets.append(dataset)
 
     if selection is not None:
         option = st.sidebar.selectbox(
-            "Dataset", datasets, index=selection, format_func=lambda a: a.id
+            "Dataset", datasets, index=selection, format_func=lambda a: a
         )
     else:
         option = st.sidebar.selectbox(
-            "Dataset", datasets, format_func=lambda a: a.id
+            "Dataset", datasets, format_func=lambda a: a
         )
-    print(option.id)
-    app_state["dataset"] = option.id
+    print(option)
+    app_state["dataset"] = option
     st.experimental_set_query_string(app_state)    
 
     # Side bar Configurations.
-    configs = get_confs(option.id)
+    configs = get_confs(option)
     conf_avail = len(configs) > 0
     conf_option = None
     if conf_avail:
@@ -193,13 +195,13 @@ if start:
             del app_state["config"]
     st.experimental_set_query_string(app_state)    
 
-    dts, fail = get(str(option.id), str(conf_option.name) if conf_option else None)
+    dts, fail = get(str(option), str(conf_option.name) if conf_option else None)
 
 
     # Main panel setup.
     if fail:
         st.markdown(
-            "Dataset is too large to browse or requires manual download. Check it out in the nlp library! \n\n Size: "
+            "Dataset is too large to browse or requires manual download. Check it out in the datasets library! \n\n Size: "
             + str(dts.info.size_in_bytes) + "\n\n Instructions: " + str(dts.manual_download_instructions)
         )
     else:
@@ -216,19 +218,19 @@ if start:
 
         st.header(
             "Dataset: "
-            + option.id
+            + option
             + " "
             + (("/ " + conf_option.name) if conf_option else ""))
 
 
         st.markdown(
             "*Homepage*: " +d.info.homepage + 
-            "\n\n*Dataset*: https://github.com/huggingface/nlp/blob/master/datasets/%s/%s.py"%(option.id, option.id))
+            "\n\n*Dataset*: https://github.com/huggingface/datasets/blob/master/datasets/%s/%s.py"%(option, option))
 
         md = """
         %s
         """ % (
-            option.description.replace("\\", "") if option.description else ""
+            d.info.description.replace("\\", "") if option else ""
         )
         st.markdown(md)
 
@@ -319,14 +321,14 @@ if start:
     ### Code
 
     ```python
-    !pip install nlp
-    from nlp import load_dataset
+    !pip install datasets
+    from datasets import load_dataset
     dataset = load_dataset(
        '%s'%s)
     ```
 
     """ % (
-        option.id,
+        option,
         (", '" + conf_option.name + "'") if conf_option else "",
     )
     st.sidebar.markdown(md)
