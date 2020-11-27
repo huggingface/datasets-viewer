@@ -9,3 +9,8 @@ Viewer for the Hugging Face datasets library.
 streamlit run run.py 
 ```
 
+or if you want to view local files
+
+```
+streamlit run run.py <absolutepath to datasets/datasets/>
+```

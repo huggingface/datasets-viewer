@@ -7,15 +7,16 @@ import yaml
 import textwrap
 import tornado
 import json
+import time
+import sys
 nlp = datasets
 
 
-
-# /home/sasha/.local/share/virtualenvs/lib-ogGKnCK_/bin/python /home/sasha/.local/share/virtualenvs/lib-ogGKnCK_/bin/streamlit run /home/sasha/nlp-viewer/run.py --server.port 8000 --server.baseUrlPath /nlp/viewer/ --browser.serverAddress huggingface.co --browser.serverPort 80 --server.enableCORS false
-
-
 MAX_SIZE = 40000000000
-
+if len(sys.argv) > 1:
+    path_to_datasets = sys.argv[1]
+else:
+    path_to_datasets = None
 
 ## Hack to extend the width of the main pane.
 def _max_width_():
@@ -45,6 +46,7 @@ def _max_width_():
 
 _max_width_()
 
+
 def render_features(features):
     if isinstance(features, dict):
         return {k: render_features(v) for k, v in features.items()}
@@ -56,42 +58,38 @@ def render_features(features):
 
     if isinstance(features, nlp.features.Sequence):
         return {"[]": render_features(features.feature)}
-    
     return features
-
-import time
-
 
 
 app_state = st.experimental_get_query_params()
-
+# print(app_state)
 start = True
-loaded = False
+loaded = True
 INITIAL_SELECTION = ""
-if app_state == "NOT_INITIALIZED":
-    latest_iteration = st.empty()
-    bar = st.progress(0)
-    start = False
-    for i in range(0, 101, 10):
-      # Update the progress bar with each iteration.
-      #latest_iteration.text(f'Iteration {i+1}')
-      bar.progress(i)
-      time.sleep(0.1)
-      if i == 100:
-          start = True
-          bar.empty()
-          loaded = True
+# if app_state == "NOT_INITIALIZED":
+#     latest_iteration = st.empty()
+#     bar = st.progress(0)
+#     start = False
+#     for i in range(0, 101, 10):
+#         # Update the progress bar with each iteration.
+#         # latest_iteration.text(f'Iteration {i+1}')
+#         bar.progress(i)
+#         time.sleep(0.1)
+#         if i == 100:
+#             start = True
+#             bar.empty()
+#             loaded = True
 
-          app_state = st.experimental_get_query_params()
-          print("appstate is", app_state)
-          app_state.setdefault("dataset", "glue")
-          if len(app_state.get("dataset", [])) == 1:
-              app_state["dataset"] = app_state["dataset"][0]
-              INITIAL_SELECTION = app_state["dataset"]
-          if len(app_state.get("config", [])) == 1:
-              app_state["config"] = app_state["config"][0]
-        
-          
+#             app_state = st.experimental_get_query_params()
+#             print("appstate is", app_state)
+app_state.setdefault("dataset", "glue")
+if len(app_state.get("dataset", [])) == 1:
+    app_state["dataset"] = app_state["dataset"][0]
+    INITIAL_SELECTION = app_state["dataset"]
+# if len(app_state.get("config", [])) == 1:
+#     app_state["config"] = app_state["config"][0]
+print(INITIAL_SELECTION)
+
 if start:
     ## Logo and sidebar decoration.
     st.sidebar.markdown(
@@ -102,7 +100,10 @@ if start:
         unsafe_allow_html=True,
     )
     st.sidebar.image("datasets_logo_name.png", width=300)
-    st.sidebar.markdown("<center><h2><a href='https://github.com/huggingface/datasets'>github/huggingface/datasets</h2></a></center>", unsafe_allow_html=True)
+    st.sidebar.markdown(
+        "<center><h2><a href='https://github.com/huggingface/datasets'>github/huggingface/datasets</h2></a></center>",
+        unsafe_allow_html=True,
+    )
     st.sidebar.markdown(
         """
     <center>
@@ -114,12 +115,17 @@ if start:
     )
     st.sidebar.subheader("")
 
-
     ## Interaction with the nlp libary.
-    @st.cache
+    # @st.cache
     def get_confs(opt):
         "Get the list of confs for a dataset."
-        module_path = nlp.load.prepare_module(opt, dataset=True)
+        if path_to_datasets is not None and opt is not None:
+            path = path_to_datasets + opt
+        else:
+            path = opt
+
+        module_path = nlp.load.prepare_module(path, dataset=True
+        )
         # Get dataset builder class from the processing script
         builder_cls = nlp.load.import_main_class(module_path[0], dataset=True)
         # Instantiate the dataset builder
@@ -129,22 +135,31 @@ if start:
         else:
             return []
 
-    @st.cache(allow_output_mutation=True)
+    # @st.cache(allow_output_mutation=True)
     def get(opt, conf=None):
         "Get a dataset from name and conf"
-
-        module_path = nlp.load.prepare_module(opt, dataset=True)
+        if path_to_datasets is not None:
+            path = path_to_datasets + opt
+        else:
+            path = opt
+        
+        module_path = nlp.load.prepare_module(path, dataset=True)
         builder_cls = nlp.load.import_main_class(module_path[0], dataset=True)
         if conf:
-            builder_instance = builder_cls(name=conf)
+            builder_instance = builder_cls(name=conf, cache_dir=path if path_to_datasets is not None else None)
         else:
-            builder_instance = builder_cls()
+            builder_instance = builder_cls(cache_dir=path if path_to_datasets is not None else None)
         fail = False
-        if (
+        if path_to_datasets is not None:
+            dts = nlp.load_dataset(path,
+                                   name=builder_cls.BUILDER_CONFIGS[0].name if builder_cls.BUILDER_CONFIGS else None,
+            )
+            dataset = dts
+
+        elif (
             builder_instance.manual_download_instructions is None
             and builder_instance.info.size_in_bytes is not None
-            and builder_instance.info.size_in_bytes < MAX_SIZE
-        ):
+            and builder_instance.info.size_in_bytes < MAX_SIZE):
             builder_instance.download_and_prepare()
             dts = builder_instance.as_dataset()
             dataset = dts
@@ -153,26 +168,31 @@ if start:
             fail = True
         return dataset, fail
 
-
     # Dataset select box.
     datasets = []
     selection = None
-    for i, dataset in enumerate(nlp.list_datasets(with_community_datasets=False)):
+
+    import glob
+    if path_to_datasets is None:
+        list_of_datasets = nlp.list_datasets(with_community_datasets=False)
+    else:
+        list_of_datasets = sorted(glob.glob(path_to_datasets + "*"))
+    print(list_of_datasets)
+    for i, dataset in enumerate(list_of_datasets):
+        dataset = dataset.split("/")[-1]
         if INITIAL_SELECTION and dataset == INITIAL_SELECTION:
             selection = i
-        datasets.append(dataset)
+        datasets.append(dataset )
 
     if selection is not None:
         option = st.sidebar.selectbox(
             "Dataset", datasets, index=selection, format_func=lambda a: a
         )
     else:
-        option = st.sidebar.selectbox(
-            "Dataset", datasets, format_func=lambda a: a
-        )
+        option = st.sidebar.selectbox("Dataset", datasets, format_func=lambda a: a)
     print(option)
     app_state["dataset"] = option
-    st.experimental_set_query_params(**app_state)    
+    st.experimental_set_query_params(**app_state)
 
     # Side bar Configurations.
     configs = get_confs(option)
@@ -182,23 +202,26 @@ if start:
         start = 0
         for i, conf in enumerate(configs):
             if conf.name == app_state.get("config", None):
-                start = i 
-        conf_option = st.sidebar.selectbox("Subset", configs, index=start, format_func=lambda a: a.name)
+                start = i
+        conf_option = st.sidebar.selectbox(
+            "Subset", configs, index=start, format_func=lambda a: a.name
+        )
         app_state["config"] = conf_option.name
-    
+
     else:
         if "config" in app_state:
             del app_state["config"]
-    st.experimental_set_query_params(**app_state)    
+    st.experimental_set_query_params(**app_state)
 
     dts, fail = get(str(option), str(conf_option.name) if conf_option else None)
-
 
     # Main panel setup.
     if fail:
         st.markdown(
             "Dataset is too large to browse or requires manual download. Check it out in the datasets library! \n\n Size: "
-            + str(dts.info.size_in_bytes) + "\n\n Instructions: " + str(dts.manual_download_instructions)
+            + str(dts.info.size_in_bytes)
+            + "\n\n Instructions: "
+            + str(dts.manual_download_instructions)
         )
     else:
 
@@ -216,12 +239,15 @@ if start:
             "Dataset: "
             + option
             + " "
-            + (("/ " + conf_option.name) if conf_option else ""))
-
+            + (("/ " + conf_option.name) if conf_option else "")
+        )
 
         st.markdown(
-            "*Homepage*: " +d.info.homepage + 
-            "\n\n*Dataset*: https://github.com/huggingface/datasets/blob/master/datasets/%s/%s.py"%(option, option))
+            "*Homepage*: "
+            + d.info.homepage
+            + "\n\n*Dataset*: https://github.com/huggingface/datasets/blob/master/datasets/%s/%s.py"
+            % (option, option)
+        )
 
         md = """
         %s
@@ -230,11 +256,13 @@ if start:
         )
         st.markdown(md)
 
-
-        
         step = 50
         offset = st.sidebar.number_input(
-            "Offset (Size: %d)"%len(d), min_value=0, max_value=int(len(d)) - step, value=0, step=step
+            "Offset (Size: %d)" % len(d),
+            min_value=0,
+            max_value=int(len(d)) - step,
+            value=0,
+            step=step,
         )
 
         citation = st.sidebar.checkbox("Show Citations", False)
@@ -248,8 +276,8 @@ if start:
             d.info.citation.replace("\\", "").replace("}", " }").replace("{", "{ "),
         )
         if citation:
-            st.markdown(md)        
-        #st.text("Features:")
+            st.markdown(md)
+        # st.text("Features:")
         if show_features:
             on_keys = st.multiselect("Features", keys, keys)
             st.write(render_features(d.features))
@@ -268,7 +296,11 @@ if start:
                     if isinstance(v, str):
                         out = v
                         st.text(textwrap.fill(out, width=120))
-                    elif isinstance(v, bool) or isinstance(v, int) or isinstance(v, float):
+                    elif (
+                        isinstance(v, bool)
+                        or isinstance(v, int)
+                        or isinstance(v, float)
+                    ):
                         st.text(v)
                     else:
                         st.write(v)
@@ -284,7 +316,11 @@ if start:
                     if isinstance(v, str):
                         out = v
                         df_item[k] = textwrap.fill(out, width=50)
-                    elif isinstance(v, bool) or isinstance(v, int) or isinstance(v, float):
+                    elif (
+                        isinstance(v, bool)
+                        or isinstance(v, int)
+                        or isinstance(v, float)
+                    ):
                         df_item[k] = v
                     else:
                         out = json.dumps(v, indent=2, sort_keys=True)
@@ -292,25 +328,28 @@ if start:
                 df.append(df_item)
             df2 = df
             df = pd.DataFrame(df).set_index("_number")
+
             def hover(hover_color="#ffff99"):
-                return dict(selector="tr:hover",
-                            props=[("background-color", "%s" % hover_color)])
+                return dict(
+                    selector="tr:hover",
+                    props=[("background-color", "%s" % hover_color)],
+                )
 
             styles = [
                 hover(),
-                dict(selector="th", props=[("font-size", "150%"),
-                                           ("text-align", "center")]),
-                dict(selector="caption", props=[("caption-side", "bottom")])
+                dict(
+                    selector="th",
+                    props=[("font-size", "150%"), ("text-align", "center")],
+                ),
+                dict(selector="caption", props=[("caption-side", "bottom")]),
             ]
 
             # Table view. Use pands styling.
-            style = df.style.set_properties(**{"text-align": "left", "white-space":"pre"}) \
-                            .set_table_styles(
-                                [dict(selector="th", props=[("text-align", "left")])]
-                            )
+            style = df.style.set_properties(
+                **{"text-align": "left", "white-space": "pre"}
+            ).set_table_styles([dict(selector="th", props=[("text-align", "left")])])
             style = style.set_table_styles(styles)
             st.table(style)
-
 
     # Additional dataset installation and sidebar properties.
     md = """
@@ -328,8 +367,3 @@ if start:
         (", '" + conf_option.name + "'") if conf_option else "",
     )
     st.sidebar.markdown(md)
-
-
-
-
-
