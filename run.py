@@ -9,10 +9,6 @@ import tornado
 import json
 nlp = datasets
 
-from streamlit.server.Server import Server
-
-import streamlit.ReportThread as ReportThread
-from streamlit.server.Server import Server
 
 
 # /home/sasha/.local/share/virtualenvs/lib-ogGKnCK_/bin/python /home/sasha/.local/share/virtualenvs/lib-ogGKnCK_/bin/streamlit run /home/sasha/nlp-viewer/run.py --server.port 8000 --server.baseUrlPath /nlp/viewer/ --browser.serverAddress huggingface.co --browser.serverPort 80 --server.enableCORS false
@@ -67,7 +63,7 @@ import time
 
 
 
-app_state = st.experimental_get_query_string()
+app_state = st.experimental_get_query_params()
 
 start = True
 loaded = False

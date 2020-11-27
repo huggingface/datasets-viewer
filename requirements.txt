@@ -1,4 +1,4 @@
-nlp
+datasets
 streamlit
 pandas
-textwrap
+pyyaml
