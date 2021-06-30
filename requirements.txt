@@ -2,3 +2,4 @@ datasets
 streamlit
 pandas
 pyyaml
+py7zr
