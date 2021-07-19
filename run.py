@@ -107,9 +107,9 @@ if start:
     st.sidebar.markdown(
         """
     <center>
-        <a target="_blank" href="https://huggingface.co/nlp/">Docs</a> | 
-        <a target="_blank" href="https://colab.research.google.com/github/huggingface/datasets/blob/master/notebooks/Overview.ipynb"> Overview</a>
-    | <a href="https://huggingface.co/nlp/add_dataset.html" target="_blank">Add Dataset</a>
+        <a target="_blank" href="https://huggingface.co/docs/datasets/">Docs</a> |
+        <a target="_blank" href="https://huggingface.co/datasets">Browse</a>
+    | <a href="https://huggingface.co/new-dataset" target="_blank">Add Dataset</a>
     </center>""",
         unsafe_allow_html=True,
     )
@@ -245,8 +245,8 @@ if start:
         st.markdown(
             "*Homepage*: "
             + d.info.homepage
-            + "\n\n*Dataset*: https://github.com/huggingface/datasets/blob/master/datasets/%s/%s.py"
-            % (option, option)
+            + "\n\n*Dataset*: https://huggingface.co/datasets/%s"
+            % (option)
         )
 
         md = """
