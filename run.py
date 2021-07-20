@@ -9,7 +9,6 @@ import tornado
 import json
 import time
 import sys
-nlp = datasets
 
 
 MAX_SIZE = 40000000000
@@ -50,13 +49,13 @@ _max_width_()
 def render_features(features):
     if isinstance(features, dict):
         return {k: render_features(v) for k, v in features.items()}
-    if isinstance(features, nlp.features.ClassLabel):
+    if isinstance(features, datasets.features.ClassLabel):
         return features.names
 
-    if isinstance(features, nlp.features.Value):
+    if isinstance(features, datasets.features.Value):
         return features.dtype
 
-    if isinstance(features, nlp.features.Sequence):
+    if isinstance(features, datasets.features.Sequence):
         return {"[]": render_features(features.feature)}
     return features
 
@@ -107,15 +106,15 @@ if start:
     st.sidebar.markdown(
         """
     <center>
-        <a target="_blank" href="https://huggingface.co/nlp/">Docs</a> | 
-        <a target="_blank" href="https://colab.research.google.com/github/huggingface/datasets/blob/master/notebooks/Overview.ipynb"> Overview</a>
-    | <a href="https://huggingface.co/nlp/add_dataset.html" target="_blank">Add Dataset</a>
+        <a target="_blank" href="https://huggingface.co/docs/datasets/">Docs</a> |
+        <a target="_blank" href="https://huggingface.co/datasets">Browse</a>
+    | <a href="https://huggingface.co/new-dataset" target="_blank">Add Dataset</a>
     </center>""",
         unsafe_allow_html=True,
     )
     st.sidebar.subheader("")
 
-    ## Interaction with the nlp libary.
+    ## Interaction with the datasets libary.
     # @st.cache
     def get_confs(opt):
         "Get the list of confs for a dataset."
@@ -124,10 +123,10 @@ if start:
         else:
             path = opt
 
-        module_path = nlp.load.prepare_module(path, dataset=True
+        module_path = datasets.load.prepare_module(path, dataset=True
         )
         # Get dataset builder class from the processing script
-        builder_cls = nlp.load.import_main_class(module_path[0], dataset=True)
+        builder_cls = datasets.load.import_main_class(module_path[0], dataset=True)
         # Instantiate the dataset builder
         confs = builder_cls.BUILDER_CONFIGS
         if confs and len(confs) > 1:
@@ -143,15 +142,15 @@ if start:
         else:
             path = opt
         
-        module_path = nlp.load.prepare_module(path, dataset=True)
-        builder_cls = nlp.load.import_main_class(module_path[0], dataset=True)
+        module_path = datasets.load.prepare_module(path, dataset=True)
+        builder_cls = datasets.load.import_main_class(module_path[0], dataset=True)
         if conf:
             builder_instance = builder_cls(name=conf, cache_dir=path if path_to_datasets is not None else None)
         else:
             builder_instance = builder_cls(cache_dir=path if path_to_datasets is not None else None)
         fail = False
         if path_to_datasets is not None:
-            dts = nlp.load_dataset(path,
+            dts = datasets.load_dataset(path,
                                    name=builder_cls.BUILDER_CONFIGS[0].name if builder_cls.BUILDER_CONFIGS else None,
             )
             dataset = dts
@@ -169,12 +168,12 @@ if start:
         return dataset, fail
 
     # Dataset select box.
-    datasets = []
+    dataset_names = []
     selection = None
 
     import glob
     if path_to_datasets is None:
-        list_of_datasets = nlp.list_datasets(with_community_datasets=False)
+        list_of_datasets = datasets.list_datasets(with_community_datasets=False)
     else:
         list_of_datasets = sorted(glob.glob(path_to_datasets + "*"))
     print(list_of_datasets)
@@ -182,14 +181,14 @@ if start:
         dataset = dataset.split("/")[-1]
         if INITIAL_SELECTION and dataset == INITIAL_SELECTION:
             selection = i
-        datasets.append(dataset )
+        dataset_names.append(dataset )
 
     if selection is not None:
         option = st.sidebar.selectbox(
-            "Dataset", datasets, index=selection, format_func=lambda a: a
+            "Dataset", dataset_names, index=selection, format_func=lambda a: a
         )
     else:
-        option = st.sidebar.selectbox("Dataset", datasets, format_func=lambda a: a)
+        option = st.sidebar.selectbox("Dataset", dataset_names, format_func=lambda a: a)
     print(option)
     app_state["dataset"] = option
     st.experimental_set_query_params(**app_state)
@@ -245,8 +244,8 @@ if start:
         st.markdown(
             "*Homepage*: "
             + d.info.homepage
-            + "\n\n*Dataset*: https://github.com/huggingface/datasets/blob/master/datasets/%s/%s.py"
-            % (option, option)
+            + "\n\n*Dataset*: https://huggingface.co/datasets/%s"
+            % (option)
         )
 
         md = """
