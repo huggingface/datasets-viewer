@@ -85,8 +85,8 @@ app_state.setdefault("dataset", "glue")
 if len(app_state.get("dataset", [])) == 1:
     app_state["dataset"] = app_state["dataset"][0]
     INITIAL_SELECTION = app_state["dataset"]
-# if len(app_state.get("config", [])) == 1:
-#     app_state["config"] = app_state["config"][0]
+if len(app_state.get("config", [])) == 1:
+    app_state["config"] = app_state["config"][0]
 print(INITIAL_SELECTION)
 
 if start:
