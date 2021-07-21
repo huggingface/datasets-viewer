@@ -9,6 +9,9 @@ import tornado
 import json
 import time
 import sys
+import glob
+import json
+#from st_annotated_text import annotated_text
 nlp = datasets
 
 
@@ -61,6 +64,21 @@ def render_features(features):
     return features
 
 
+tag_dict = {}
+data_tags = {}
+    
+for d in json.load(open("datasets.json", "r")):
+    if "card_data" in d:
+        data_tags[d["id"]] = d["card_data"]
+        
+        for k, v in d["card_data"].items():
+            for value in v:
+                tag = k + u":" + str(value)
+                tag_dict.setdefault(tag, [])
+                tag_dict[tag].append(d["id"])
+    else:
+        data_tags[d["id"]] = {}
+
 app_state = st.experimental_get_query_params()
 # print(app_state)
 start = True
@@ -99,7 +117,7 @@ if start:
     </center>""",
         unsafe_allow_html=True,
     )
-    st.sidebar.image("datasets_logo_name.png", width=300)
+    st.sidebar.image("datasets_logo_name.png", width=260)
     st.sidebar.markdown(
         "<center><h2><a href='https://github.com/huggingface/datasets'>github/huggingface/datasets</h2></a></center>",
         unsafe_allow_html=True,
@@ -107,16 +125,16 @@ if start:
     st.sidebar.markdown(
         """
     <center>
-        <a target="_blank" href="https://huggingface.co/nlp/">Docs</a> | 
+        <a target="_blank" href="https://huggingface.co/datasets/">Docs</a> | 
         <a target="_blank" href="https://colab.research.google.com/github/huggingface/datasets/blob/master/notebooks/Overview.ipynb"> Overview</a>
-    | <a href="https://huggingface.co/nlp/add_dataset.html" target="_blank">Add Dataset</a>
+    | <a href="https://huggingface.co/datasets/add_dataset.html" target="_blank">Add Dataset</a>
     </center>""",
         unsafe_allow_html=True,
     )
     st.sidebar.subheader("")
 
     ## Interaction with the nlp libary.
-    # @st.cache
+    @st.cache
     def get_confs(opt):
         "Get the list of confs for a dataset."
         if path_to_datasets is not None and opt is not None:
@@ -135,7 +153,7 @@ if start:
         else:
             return []
 
-    # @st.cache(allow_output_mutation=True)
+    @st.cache(allow_output_mutation=True)
     def get(opt, conf=None):
         "Get a dataset from name and conf"
         if path_to_datasets is not None:
@@ -168,15 +186,32 @@ if start:
             fail = True
         return dataset, fail
 
+    tags = list(tag_dict.keys())
+    
+    tags.sort()
+    dataset_filter = st.sidebar.multiselect(
+        "Filter by Tags", tags
+    )
+
+    
     # Dataset select box.
     datasets = []
     selection = None
 
-    import glob
+
     if path_to_datasets is None:
         list_of_datasets = nlp.list_datasets(with_community_datasets=False)
     else:
         list_of_datasets = sorted(glob.glob(path_to_datasets + "*"))
+
+        
+    if dataset_filter:
+        list_of_datasets = set(list_of_datasets)
+        for f in dataset_filter:
+            list_of_datasets = list_of_datasets & set(tag_dict[f])
+        list_of_datasets = list(list_of_datasets)
+        list_of_datasets.sort()
+        
     print(list_of_datasets)
     for i, dataset in enumerate(list_of_datasets):
         dataset = dataset.split("/")[-1]
@@ -186,13 +221,13 @@ if start:
 
     if selection is not None:
         option = st.sidebar.selectbox(
-            "Dataset", datasets, index=selection, format_func=lambda a: a
+            "Dataset (Size: %d)"%(len(datasets)), datasets, index=selection, format_func=lambda a: a
         )
     else:
-        option = st.sidebar.selectbox("Dataset", datasets, format_func=lambda a: a)
+        option = st.sidebar.selectbox("Dataset (Size: %d)"%(len(datasets)), datasets, format_func=lambda a: a)
     print(option)
     app_state["dataset"] = option
-    st.experimental_set_query_params(**app_state)
+    # st.experimental_set_query_params(**app_state)
 
     # Side bar Configurations.
     configs = get_confs(option)
@@ -211,7 +246,7 @@ if start:
     else:
         if "config" in app_state:
             del app_state["config"]
-    st.experimental_set_query_params(**app_state)
+    # st.experimental_set_query_params(**app_state)
 
     dts, fail = get(str(option), str(conf_option.name) if conf_option else None)
 
@@ -241,12 +276,19 @@ if start:
             + " "
             + (("/ " + conf_option.name) if conf_option else "")
         )
+        s = []
+        for k, v in app_state.items():
+            s .append( k + "=" + v)
 
         st.markdown(
             "*Homepage*: "
             + d.info.homepage
             + "\n\n*Dataset*: https://github.com/huggingface/datasets/blob/master/datasets/%s/%s.py"
             % (option, option)
+        )
+        st.markdown(
+            "*Permalink*: https://huggingface.co/datasets/viewer/?"
+            + "&".join(s)
         )
 
         md = """
@@ -256,6 +298,16 @@ if start:
         )
         st.markdown(md)
 
+        if option in data_tags and data_tags[option]:
+            tags = data_tags[option]
+            construct = "*Tags* \n"
+            for k in tags:
+                construct += f"* {k} : "
+                construct += ", ".join([v for v in tags[k]])
+                construct += "\n"
+            st.markdown(construct)
+
+        
         step = 50
         offset = st.sidebar.number_input(
             "Offset (Size: %d)" % len(d),
