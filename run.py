@@ -322,7 +322,7 @@ if start:
                     ):
                         df_item[k] = v
                     else:
-                        out = json.dumps(v, indent=2, sort_keys=True)
+                        out = json.dumps(v, indent=2, sort_keys=True, ensure_ascii=False)
                         df_item[k] = out
                 df.append(df_item)
             df2 = df
